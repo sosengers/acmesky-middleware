@@ -65,4 +65,6 @@ def on_join(room):
         )
 
 if __name__ == "__main__":
-    socketio.run(app, host="0.0.0.0", port="8080")
+    host = environ.get("MIDDLEWARE_HOST", "0.0.0.0")
+    port = environ.get("MIDDLEWARE_PORT", "8080")
+    socketio.run(app, host=host, port=port)
