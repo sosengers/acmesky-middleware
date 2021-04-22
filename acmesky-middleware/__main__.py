@@ -13,10 +13,12 @@ rabbitmq_host = environ.get("RABBITMQ_HOST")
 socketio = SocketIO(app, cors_allowed_origins="*")
 
 
-# RabbitMQ
-
-
 def connection_handler(host: str) -> pika.adapters.blocking_connection.BlockingChannel:
+    """
+    Connection handler to the RabbitMQ service
+    :param host: RabbitMQ host
+    :return: a channel to communicate (writing/reading) to the queue
+    """
     print(f"Connecting to ACMESky-Backend [host = {host}]...")
     try:
         connection = pika.BlockingConnection(pika.ConnectionParameters(host=host))
@@ -33,12 +35,18 @@ def connection_handler(host: str) -> pika.adapters.blocking_connection.BlockingC
 
 
 def queue_selection(
-    channel: pika.adapters.blocking_connection.BlockingChannel,
-    context,
-    queue_name: str,
+        channel: pika.adapters.blocking_connection.BlockingChannel,
+        context,
+        queue_name: str,
 ):
+    """
+    Using the flask context, define a message handler for the message received by the RabbitMQ queue, when a message is
+    received, it is converted to JSON and send through the WebSocket to the Client
+    :param channel: the RabbitMQ channel from which receive the messages
+    :param context: the flask socket-io context to use (necessary to send the message to the right client)
+    :param queue_name: the queue name from which read the RabbitMQ messages
+    """
     with context:
-
         def message_handler(ch, method, properties, body: bytes):
             with context:
                 json = loads(body)
@@ -57,12 +65,17 @@ def queue_selection(
 
 @socketio.on('join')
 def on_join(room):
+    """
+    Method called when a new client request to connect through WebSocket
+    :param room: room used to communicate with the client
+    """
     join_room(room)
     queue_selection(
         channel=connection_handler(rabbitmq_host),
         context=app.app_context(),
         queue_name=room
-        )
+    )
+
 
 if __name__ == "__main__":
     host = environ.get("MIDDLEWARE_HOST", "0.0.0.0")
